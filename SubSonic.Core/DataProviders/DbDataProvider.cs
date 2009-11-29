@@ -12,6 +12,7 @@
 //   rights and limitations under the License.
 // 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
@@ -129,7 +130,7 @@ namespace SubSonic.DataProviders
                 // if it is a shared connection, we shouldn't be telling the reader to close it when it is done
                 rdr = scope.IsUsingSharedConnection ? cmd.ExecuteReader() : cmd.ExecuteReader(CommandBehavior.CloseConnection);
             }
-            catch(Exception)
+            catch(Exception ex)
             {
                 // AutoConnectionScope will figure out what to do with the connection
                 scope.Dispose();
@@ -485,10 +486,33 @@ namespace SubSonic.DataProviders
                         else
                             p.Value = DBNull.Value;
                     }
-                    else
-                        p.Value = param.ParameterValue;
+					else if ((param.ParameterValue as IList).Count > 1) {//mike When doing a Contains we param.ParameterValue will have many items so we need to iterate  
+						int n = 0;
+						string ammendCmnd = "";
+						foreach (var par in param.ParameterValue as IList) {
+							n++;
+							DbParameter p1 = cmd.CreateParameter();
+							p1.ParameterName = param.ParameterName+"_"+n;
+							if (ammendCmnd != "") {
+								ammendCmnd += ',';
+							}
+							ammendCmnd += "@"+p1.ParameterName;
+							p1.Direction = param.Mode;
+							p1.DbType = Database.GetDbType(par.GetType());
+							p1.Value = par;
+							cmd.Parameters.Add(p1);
+						
+						}
+						cmd.CommandText = cmd.CommandText.Replace("@__ToBeEditted__", ammendCmnd); //mike this is a horrible fidle but we don't know how many items in the list at this point - see line 571 in TSqlFormatter
+						p.Value = param.ParameterValue;
+					}
 
-                    cmd.Parameters.Add(p);
+					else {
+						p.Value = param.ParameterValue;
+					}
+					if ((param.ParameterValue as IList == null) || (param.ParameterValue as IList).Count == 1) {
+ 						cmd.Parameters.Add(p);
+ 					}
                 }
             }
         }

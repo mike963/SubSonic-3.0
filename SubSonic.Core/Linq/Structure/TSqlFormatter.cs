@@ -565,9 +565,20 @@ namespace SubSonic.Linq.Structure
                 }
                 return m;
             }
-            else if (m.Method.Name == "Equals")
-            {
-                if (m.Method.IsStatic && m.Method.DeclaringType == typeof(object))
+			else if (m.Method.Name == "Contains") {
+				sb.Append("(");
+				this.Visit(m.Arguments[0]);
+				sb.Append(" In (@__ToBeEditted__)");//mike this is a horrible fidle but we don't know how many items in the list at this point see line 506 in DbDataProvider
+				int n = 0;
+				//foreach (var par in m.Object as IEnumerable) {
+				//    n++;
+
+				//}
+				sb.Append(")");
+				return m;
+			}
+			else if (m.Method.Name == "Equals") {
+				if (m.Method.IsStatic && m.Method.DeclaringType == typeof(object))
                 {
                     sb.Append("(");
                     this.Visit(m.Arguments[0]);
